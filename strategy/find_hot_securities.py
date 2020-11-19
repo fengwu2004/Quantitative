@@ -69,8 +69,6 @@ class FindHotSecurities(object):
 
                 result[block.name].append(codeInfo)
 
-        self.storeToExcel(result)
-
     def getHotSecuritiesEx(self) -> List[CodeInfo]:
 
         result: List[CodeInfo] = list()

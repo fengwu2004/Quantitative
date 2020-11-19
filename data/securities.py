@@ -14,8 +14,6 @@ class Securities(object):
 
         self.klines:List[KLineModel] = list()
 
-        self.weekKLines: List[KLineModel] = list()
-
         self.capital = 0
 
         self.crest:List[KLineModel] = list()
@@ -115,6 +113,62 @@ class Securities(object):
                 result += 1
 
         return result
+
+    def getGreatIncreaseCountOf(self, klineCount:int) -> int:
+
+        if self.codeInfo.isST() or self.codeInfo.isSTIB():
+
+            return 0
+
+        if len(self.klines) < 200:
+
+            return 0
+
+        if len(self.klines) <= klineCount:
+
+            return 0
+
+        result = 0
+
+        start = len(self.klines) - klineCount
+
+        end = len(self.klines) - 1
+
+        for kline in self.klines[start:end]:
+
+            if (kline.high - kline.low) / kline.preClose > 0.095:
+
+                result += 1
+
+        return result
+
+    def isGreatIncreaseInPast(self, day:int, increase:float) -> bool:
+
+        if self.codeInfo.isST() or self.codeInfo.isSTIB():
+
+            return False
+
+        if len(self.klines) < 200:
+
+            return False
+
+        if self.klines[len(self.klines) - 1].close < 4:
+
+            return False
+
+        if self.klines[len(self.klines) - 1].greateChangeRatio():
+
+            return False
+
+        start = len(self.klines) - day
+
+        for i in range(start, len(self.klines) - 3):
+
+            if (self.klines[i + 3].close - self.klines[i].preClose) / self.klines[i].preClose > increase:
+
+                return True
+
+        return False
 
     def toJson(self):
 
