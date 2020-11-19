@@ -46,6 +46,11 @@ class DatabaseMgr(object):
         return self.db['industry']
 
     @property
+    def hotSecurities(self):
+
+        return self.db['hotSecurities']
+
+    @property
     def stockInfos(self):
         
         return self.db['stockinfo']

@@ -3,6 +3,7 @@ import tornado.ioloop
 import tornado.web
 import tornado.httpserver
 import datetime
+from data.databasemgr import DatabaseMgr
 from typing import Dict, List
 
 from data.securities import Securities
@@ -10,12 +11,14 @@ from data.codeInfo import CodeInfo
 from storemgr.storemgr import SecuritiesMgr
 from webserver.handleCapitalInfo import HandleCapitalInfo
 from webserver.handleContinueIncrease import HandleContinueIncrease
+from webserver.handleHotToday import HandleHotToday
 from webserver.handleTouchHigh import HandleTouchHigh
 from webserver.handleGreatIncrease import HandleGreatIncrease
 from webserver.handleThreeDayGreatIncreaseEx import HandleThreeDayGreatIncrease
 from webserver.handleInIncrease import HandleInIncrease
 from webserver.handleInDecrease import HandleInDecrease
 from webserver.handleInLow import HandleInLow
+
 
 def make_app():
 
@@ -27,7 +30,8 @@ def make_app():
         ("/ask/threedaygreateincrease", HandleThreeDayGreatIncrease),
         ("/ask/increase", HandleInIncrease),
         ("/ask/decrease", HandleInDecrease),
-        ("/ask/inLow", HandleInLow)
+        ("/ask/inLow", HandleInLow),
+        ("/ask/hottoday", HandleHotToday)
     ])
 
     server = tornado.httpserver.HTTPServer(app, max_buffer_size=512 * 1024 * 1024)
@@ -36,7 +40,7 @@ def make_app():
 
     tornado.ioloop.IOLoop.instance().start()
 
-def refreshHotSecurities():
+def getHotSecurities():
 
     result: List[CodeInfo] = []
 
@@ -50,7 +54,7 @@ def refreshHotSecurities():
 
         billion = 1000000000
 
-        lastIndex = len() - 1
+        lastIndex = len(securities.klines) - 1
 
         if securities.capital * securities.klines[lastIndex].close < 4 * billion or securities.capital * securities.klines[lastIndex].close > 50 * billion:
 
@@ -76,16 +80,31 @@ def refreshHotSecurities():
 
     return result
 
+def refreshHotSecurities():
+
+    items = getHotSecurities()
+
+    today = datetime.date.today()
+
+    dateToday = today.strftime('%m-%d')
+
+    DatabaseMgr.instance().hotSecurities.delete_one({'date': dateToday})
+
+    result = []
+
+    for item in items:
+
+        result.append(item.toJson())
+
+    data = {'date':dateToday, 'codeInfos':result}
+
+    DatabaseMgr.instance().hotSecurities.insert_one(data)
 
 print('start load time = ', datetime.datetime.now())
 
 SecuritiesMgr.instance()
 
-items = refreshHotSecurities()
-
-for item in items:
-
-    print(item.name)
+refreshHotSecurities()
 
 print('load finish time = ', datetime.datetime.now())
 
