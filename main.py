@@ -18,6 +18,7 @@ from webserver.handleThreeDayGreatIncreaseEx import HandleThreeDayGreatIncrease
 from webserver.handleInIncrease import HandleInIncrease
 from webserver.handleInDecrease import HandleInDecrease
 from webserver.handleInLow import HandleInLow
+from webserver.handleUploadStocks import HandleUploadStocks
 
 
 def make_app():
@@ -28,8 +29,9 @@ def make_app():
         ("/ask/touchHigh", HandleTouchHigh),
         ("/ask/greatIncrease", HandleGreatIncrease),
         ("/ask/threedaygreateincrease", HandleThreeDayGreatIncrease),
-        ("/ask/increase", HandleInIncrease),
+        ("/upload/allstocks", HandleUploadStocks),
         ("/ask/decrease", HandleInDecrease),
+        ("/ask/inLow", HandleInLow),
         ("/ask/inLow", HandleInLow),
         ("/ask/hottoday", HandleHotToday)
     ])
@@ -39,72 +41,6 @@ def make_app():
     server.listen(8888)
 
     tornado.ioloop.IOLoop.instance().start()
-
-def getHotSecurities():
-
-    result: List[CodeInfo] = []
-
-    securitiesList: List[Securities] = SecuritiesMgr.instance().securitiesList
-
-    for securities in securitiesList:
-
-        if len(securities.klines) < 200:
-
-            continue
-
-        billion = 1000000000
-
-        lastIndex = len(securities.klines) - 1
-
-        if securities.capital * securities.klines[lastIndex].close < 4 * billion or securities.capital * securities.klines[lastIndex].close > 50 * billion:
-
-            continue
-
-        if securities.getGreatIncreaseCountOf(15) >= 3:
-
-            result.append(securities.codeInfo)
-
-            continue
-
-        if securities.getGreatIncreaseCountOf(10) == 2:
-
-            result.append(securities.codeInfo)
-
-            continue
-
-        if securities.isGreatIncreaseInPast(day = 12, increase = 0.2):
-
-            result.append(securities.codeInfo)
-
-            continue
-
-    return result
-
-def refreshHotSecurities():
-
-    items = getHotSecurities()
-
-    today = datetime.date.today()
-
-    dateToday = today.strftime('%m-%d')
-
-    DatabaseMgr.instance().hotSecurities.delete_one({'date': dateToday})
-
-    result = []
-
-    for item in items:
-
-        result.append(item.toJson())
-
-    data = {'date':dateToday, 'codeInfos':result}
-
-    DatabaseMgr.instance().hotSecurities.insert_one(data)
-
-print('start load time = ', datetime.datetime.now())
-
-SecuritiesMgr.instance()
-
-refreshHotSecurities()
 
 print('load finish time = ', datetime.datetime.now())
 

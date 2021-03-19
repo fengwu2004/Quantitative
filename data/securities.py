@@ -2,9 +2,10 @@ import time
 from data.klineModel import KLineModel
 from data.codeInfo import CodeInfo
 from typing import List, Optional
+from data.TurningPoint import TurningPoint
 import copy
 
-alpha = 0.25
+alpha = 0.18
 
 class Securities(object):
 
@@ -15,6 +16,10 @@ class Securities(object):
         self.klines:List[KLineModel] = list()
 
         self.capital = 0
+
+        self.codeType = 0
+
+        self.pe:str = '--'
 
         self.crest:List[KLineModel] = list()
 
@@ -136,7 +141,7 @@ class Securities(object):
 
         for kline in self.klines[start:end]:
 
-            if (kline.high - kline.low) / kline.preClose > 0.095:
+            if (kline.close - kline.preClose) / kline.preClose > 0.095:
 
                 result += 1
 
@@ -286,6 +291,96 @@ class Securities(object):
 
         return a and b
 
+    def findHighKLine(self, kLines:[KLineModel]) -> (float, int):
+
+        result = 0
+
+        i = 0
+
+        index = -1
+
+        for kLine in kLines:
+
+            if kLine.high > result:
+
+                index = i
+
+            result = max(result, kLine.high)
+
+            i += 1
+
+        return result, index
+
+    def checkTurningPoint(self) -> bool:
+
+        for i in range(22, 23):
+
+            if self.refreshTurningPoint(i):
+
+                return True
+
+        return False
+
+    def refreshTurningPoint(self, count:int) -> bool:
+
+        if len(self.klines) < 200:
+
+            return False
+
+        tempArray = self.klines[-count:].copy()
+
+        downward = list()
+
+        upward = list()
+
+        for i in range(1, count - 1):
+
+            a = tempArray[i].high >= tempArray[i - 1].high and tempArray[i].high >= tempArray[i + 1].high
+
+            if a:
+
+                downward.append(TurningPoint(i, tempArray[i].date, tempArray[i].high, False))
+
+        return self.isDownwardNear(downward) >= 3
+
+    def isDownwardNear(self, points:[TurningPoint]):
+
+        if len(points) < 2:
+
+            return False
+
+        sortedPoints = sorted(points, key=lambda p: p.value, reverse=True)
+
+        line = sortedPoints[0].value * 0.97
+
+        count = 0
+
+        for i in range(1, len(points)):
+
+            if points[i].value >= line:
+
+                count += 1
+
+        return count
+
+    def isInLowWWave(self) -> bool:
+
+        if len(self.klines) < 200:
+
+            return False
+
+        tempArray = self.klines[-20:-1].copy()
+
+        high = self.findHighKLine(tempArray)
+
+        del tempArray[high[1]]
+
+        if self.findHighKLine(tempArray)[0] > 0.97 * high[0]:
+
+            return True
+
+        return False
+
     def isInLow(self) -> bool:
 
         crestCount = len(self.crest)
@@ -423,13 +518,37 @@ class Securities(object):
 
         return False
 
+    def isWShape(self) -> bool:
+
+        totalCount = len(self.klines)
+
+        if totalCount < 200:
+
+            return False
+
+        for i in range(10, 20):
+
+            h1 = self.findHigh(totalCount - i * 2, totalCount - i)
+
+            h2 = self.findHigh(totalCount - i, totalCount)
+
+            if self.twoValueClose(h1.high, h2.high, 0.03):
+
+                low = self.findLow(h1.index, h2.index)
+
+                if self.klines[totalCount - 1].low > low.low:
+
+                    return True
+
+        return False
+
     def findHigh(self, startIndex:int, endIndex:int) -> Optional[KLineModel]:
 
         result = None
 
         highValue = -1000000000
 
-        for i in range(max(0, startIndex), min(endIndex, len(self.klines) - 1)):
+        for i in range(max(0, startIndex), min(endIndex, len(self.klines))):
 
             kLine = self.klines[i]
 
@@ -532,6 +651,18 @@ class Securities(object):
             return False
 
         if self.codeInfo.code.index("688") == 0:
+
+            return True
+
+        return False
+
+    def isSecondBoard(self):
+
+        if "300" not in self.codeInfo.code:
+
+            return False
+
+        if self.codeInfo.code.index("300") == 0:
 
             return True
 
@@ -696,6 +827,8 @@ class Securities(object):
                 tempMin = kLine
 
         return tempMax
+
+
 
     @classmethod
     def fromJson(cls, jsonvalue):

@@ -10,8 +10,12 @@ class HandleHotToday(RequestBaseManager):
 
         dateToday = today.strftime('%m-%d')
 
-        result = DatabaseMgr.instance().hotSecurities.find_one({'date':dateToday})
+        datas = DatabaseMgr.instance().hotSecurities.find_one({'type':'w'})
 
-        codeInfos = result['codeInfos']
+        wWavecodeInfos = datas['codeInfos']
 
-        self.write({'success': 1, "data":{"codeInfos":codeInfos}})
+        datas = DatabaseMgr.instance().hotSecurities.find_one({'type':'limit'})
+
+        reachLimits = datas['codeInfos']
+
+        self.write({'success': 1, "data":{"w":wWavecodeInfos, 'limit':reachLimits}})

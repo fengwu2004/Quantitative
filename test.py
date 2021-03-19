@@ -1,27 +1,37 @@
-from data.databasemgr import DatabaseMgr
 
-items = [1, 2, 3, 4, 5]
 
-import datetime
+a = [1, 2, 3, 4]
 
-print(len(items))
+for o in reversed(a):
 
-for i in range(2, 5):
+    print(o)
+
+v = a[-4:].copy()
+
+print(v)
+
+del v[1]
+
+print(v)
+
+print(a)
+
+d = (3, 4)
+
+d[0]
+
+print(d[0])
+
+print(pow(1.01, 200))
+
+d = [1, 2, 3]
+
+f = [2, 4, 5]
+
+f.extend(d)
+
+print(f)
+
+for i in range(0, 5):
 
     print(i)
-
-today = datetime.date.today()
-
-dateToday = today.strftime('%m-%d')
-
-result = DatabaseMgr.instance().hotSecurities.find_one({'date':dateToday})
-
-codeInfos = result['codeInfos']
-
-for item in codeInfos:
-
-    print(item)
-
-print(result)
-
-DatabaseMgr.instance().hotSecurities.delete_one({'date': dateToday})

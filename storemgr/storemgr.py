@@ -6,6 +6,8 @@ from data.databasemgr import DatabaseMgr
 from data.codeInfo import CodeInfo
 from data.block import BlockInfo
 from typing import Dict, List
+from storemgr.load import formatData, getLines
+from os import walk
 
 abortBlocks = {
     "送转预期",
@@ -101,13 +103,68 @@ def loadCapitalsFromDB() -> Dict:
 
     result:Dict = {}
 
-    items = DatabaseMgr.instance().capitals.find({}, {'_id': 0})
+    items = DatabaseMgr.instance().stockInfos.find({}, {'_id': 0})
 
     for item in items:
 
-        capital = int(item["capital"])
+        capital = int(item["capitalization"])
 
         result[item["code"]] = capital
+
+    return result
+
+def loadCodeMapsFromDB() -> Dict:
+
+    result:Dict = {}
+
+    items = DatabaseMgr.instance().stockInfos.find({}, {'_id': 0})
+
+    for item in items:
+
+        codeType = int(item["type"])
+
+        result[item["code"]] = codeType
+
+    return result
+
+def loadPEMapsFromDB() -> Dict:
+
+    result:Dict = {}
+
+    items = DatabaseMgr.instance().stockInfos.find({}, {'_id': 0})
+
+    for item in items:
+
+        pe = item["pe"]
+
+        result[item["code"]] = pe
+
+    return result
+
+def loadAllSecuritiesFromFile() -> List[Securities]:
+
+    result:List[Securities] = []
+
+    mypath = 'C:/Users/Administrator/Desktop/tdx-gbk/'
+
+    f = []
+
+    for (dirpath, dirname, filenames) in walk(mypath):
+
+        f.extend(filenames)
+
+    print(f)
+
+    for file in f:
+
+        filePath = mypath + file
+
+        if filePath.find('.txt') == -1:
+            continue
+
+        stock = formatData(getLines(filePath))
+
+        result.append(stock)
 
     return result
 
@@ -181,6 +238,8 @@ class SecuritiesMgr(object):
 
         self.blockList:List[BlockInfo] = list()
 
+        self.codeMaps:Dict[str, int] = dict()
+
         self.date = None
 
         self.capitals:Dict = None
@@ -195,19 +254,31 @@ class SecuritiesMgr(object):
 
         self.date = datetime.now().strftime('%Y%m%d')
 
-        self.capitals = loadCapitalsFromDB()
+        capitalsDic = loadCapitalsFromDB()
+
+        typesDic = loadCodeMapsFromDB()
+
+        pesDic = loadPEMapsFromDB()
 
         print("开始加载" , datetime.now())
 
-        self.securitiesList = loadAllSecuritiesFromDB()
+        self.securitiesList = loadAllSecuritiesFromFile()
 
         print("结束加载", datetime.now())
 
         for securities in self.securitiesList:
 
-            if securities.codeInfo.code in self.capitals:
+            if securities.codeInfo.code in capitalsDic:
 
-                securities.capital = self.capitals[securities.codeInfo.code]
+                securities.capital = capitalsDic[securities.codeInfo.code]
+
+            if securities.codeInfo.code in typesDic:
+
+                securities.codeType = typesDic[securities.codeInfo.code]
+
+            if securities.codeInfo.code in pesDic:
+
+                securities.pe = pesDic[securities.codeInfo.code]
 
         self.blockList = loadAllBlockFromDB()
 
